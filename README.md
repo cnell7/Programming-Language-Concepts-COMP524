@@ -3,8 +3,8 @@
 - punctuation
 - number literals
 - string literals
-- keywords
--names
+- keywords  
+- names
 
 # A3
 ## Parser following this grammar...  
