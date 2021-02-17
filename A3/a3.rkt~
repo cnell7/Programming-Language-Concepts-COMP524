@@ -1,0 +1,133 @@
+#lang racket
+
+(require (only-in (file "lex.rkt") lex))
+
+(module+ test
+  (require (only-in rackunit
+                    check-equal?))
+  (check-equal? (lex "(define factorial
+  (fun (n)
+    (if (< n 0.9)
+        1  ;; base case
+        (factorial (- n 1) ;* recursive case *; ))))
+
+(print (+ \"5! is \" (factorial 5)))") (list
+ (list 'OPAREN #f)
+ (list 'NAME 'define)
+ (list 'NAME 'factorial)
+ (list 'OPAREN #f)
+ (list 'NAME 'fun)
+ (list 'OPAREN #f)
+ (list 'NAME 'n)
+ (list 'CPAREN #f)
+ (list 'OPAREN #f)
+ (list 'NAME 'if)
+ (list 'OPAREN #f)
+ (list 'NAME '<)
+ (list 'NAME 'n)
+ (list 'FLOAT 0.9)
+ (list 'CPAREN #f)
+ (list 'INT 1)
+ (list 'OPAREN #f)
+ (list 'NAME 'factorial)
+ (list 'OPAREN #f)
+ (list 'NAME '-)
+ (list 'NAME 'n)
+ (list 'INT 1)
+ (list 'CPAREN #f)
+ (list 'CPAREN #f)
+ (list 'CPAREN #f)
+ (list 'CPAREN #f)
+ (list 'CPAREN #f)
+ (list 'OPAREN #f)
+ (list 'NAME 'print)
+ (list 'OPAREN #f)
+ (list 'NAME '+)
+ (list 'STRING "5! is ")
+ (list 'OPAREN #f)
+ (list 'NAME 'factorial)
+ (list 'INT 5)
+ (list 'CPAREN #f)
+ (list 'CPAREN #f)
+ (list 'CPAREN #f))))
+
+;(lex "(define factorial
+;  (fun (n)
+;    (if (< n 0.9)
+;        1  ;; base case
+;        (factorial (- n 1) ;* recursive case *; ))))
+;
+;(print (+ \"5! is \" (factorial 5)))")
+
+(define (consume type)
+  (when (empty? (tokens))
+    (error (~a "expected token of type " type " but no remaining tokens")))
+  (let ([token (first (tokens))])
+    (when (not (equal? type (first token)))
+      (error (~a "expected token of type " type " but actual token was " token)))
+    (tokens (rest (tokens)))  ; update tokens: remove first token
+    token))
+
+(define (check type)
+  (if (empty? (tokens))
+      #f
+      (equal? type (first (first (tokens))))))
+
+(define tokens (make-parameter '()))
+
+(define (parse code)
+  (parameterize ([tokens (lex code)])
+    (parse-program)))
+
+(define (parse-program)
+  (list 'program
+        (parse-exprList)))
+
+(define (parse-exprList)
+  (list 'exprList
+        (parse-expr)
+        (parse-optExprList)))
+
+(define (parse-optExprList)
+  (if (check 'ɛ)
+      (list 'optExprList
+            (consume 'ɛ))
+      (list 'optExprList
+            (parse-exprList))))
+
+(define (parse-expr)
+  (if (atom-pending?)
+      (list 'expr
+            (parse-atom))
+      (list 'expr
+            (parse-invocation))))
+
+(define (atom-pending?)
+  (or (check 'NAME)
+      (check 'STRING)
+      (check 'INT)
+      (check 'FLOAT)))
+
+(define (parse-atom)
+  (if (check 'NAME)
+      (list 'atom
+            (consume 'NAME))
+      (if (check 'STRING)
+          (list 'atom
+                (consume 'STRING))
+          (list 'atom
+                (parse-number)))))
+
+(define (parse-number)
+  (if (check 'INT)
+      (list 'number
+            (consume 'INT))
+      (list 'number
+            (consume 'FLOAT))))
+
+(define (parse-invocation)
+  (list 'invocation
+        (list 'OPAREN)
+        (parse-exprList)
+        (list 'CPAREN)))
+
