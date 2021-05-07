@@ -15,3 +15,12 @@ expr        := atom | invocation
 atom        := NAME | STRING | number  
 number      := INT | FLOAT  
 invocation  := OPAREN exprList CPAREN  
+
+# A5  
+## simple interpreter  
+
+# A6   
+## 	environment-passing interpreter
+ 
+# A7  
+## OOP interpreter (not finished)
